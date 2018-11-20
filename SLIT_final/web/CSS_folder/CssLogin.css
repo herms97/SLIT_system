@@ -1,0 +1,65 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : 15.nov.2018, 18:55:43
+    Author     : herma
+*/
+
+p{
+    color:black;
+    font-size: 25px;
+    font-family: verdana;
+}
+
+.login{
+    position: absolute;
+
+    width: 600px;
+    height: 300px;
+
+    /* Center form on page horizontally & vertically */
+    top: 50%;
+    left: 45%;
+    margin-top: -150px;
+    margin-left: -150px;
+    display: block;
+    text-align: center;
+    background-color: #E8E8E8;
+    border: 1px solid black;
+}
+
+.login-username{
+    width: 600px;
+    height: 30px;
+    left:0px;
+    border: 1px solid black;
+    box-sizing: border-box;
+    text-align: center;
+    margin-bottom: 2px;
+}
+
+.login-password{
+    width: 600px;
+    height: 30px;
+    left:0px;
+    border: 1px solid black;
+    box-sizing: border-box;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.login-btn{
+    left:50%;
+    width:150px;
+    height: 40px;
+    color:white;
+    background-color: #1E90FF;
+}
+
+.login-btn:hover{
+    color:black;
+    background-color: whitesmoke;
+}

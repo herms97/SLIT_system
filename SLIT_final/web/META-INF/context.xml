@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Context path="/SLIT_final">
+<Resource name="jdbc/localhostDS" type="javax.sql.DataSource" auth="Container" 
+    username="root" password="root" driverClassName="com.mysql.jdbc.Driver"
+    url="jdbc:mysql://localhost:3306/SLIT">
+</Resource>
+</Context>
