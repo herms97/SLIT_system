@@ -1,116 +1,94 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.servlets;
 
+import com.servlet.db.DB;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import javax.servlet.http.Part;
 
+@WebServlet(name = "UploadServlet", urlPatterns = {"/UploadServlet"})
+@MultipartConfig(fileSizeThreshold = 1024 * 1024 * 10, // 10 MB
+        maxFileSize = 1024 * 1024 * 1000, // 1 GB
+        maxRequestSize = 1024 * 1024 * 1000)   	// 1 GB
+public class UploadServlet extends HttpServlet {
 
-@WebServlet(name = "DownloadServlet", urlPatterns = {"/DownloadServlet"})
-public class DownloadServlet extends HttpServlet {
-
-    public static int BUFFER_SIZE = 1024 * 100;
-    public static final String UPLOAD_DIR = "resources";
-    public static String fileName = null;
+    PrintWriter out = null;
+    Connection con = null;
+    PreparedStatement ps = null;
+    HttpSession session = null;
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        /**
-         * *** Get The Absolute Path Of The File To Be Downloaded ****
-         */
-        fileName = request.getParameter("fileName");
-        if (fileName == null || fileName.equals("")) {
-            /**
-             * *** Set Response Content Type ****
-             */
-            response.setContentType("text/html");
+        response.setContentType("text/plain;charset=UTF-8");
+        try {
+            out = response.getWriter();
+            session = request.getSession(false);
+            String folderName = "resources";
+            String uploadPath = request.getServletContext().getRealPath("") + File.separator + folderName;//for netbeans use this code
+            File dir = new File(uploadPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+            Part filePart = request.getPart("file");//Textbox value of name file.
+            String fileName = filePart.getSubmittedFileName();
+            Timestamp added_date = new Timestamp(System.currentTimeMillis());
+            System.out.println("fileName: " + fileName);
+            InputStream is = filePart.getInputStream();
+            Files.copy(is, Paths.get(uploadPath + File.separator + fileName), StandardCopyOption.REPLACE_EXISTING);
 
-            /**
-             * *** Print The Response ****
-             */
-            response.getWriter().println("<h3>File " + fileName + " Is Not Present .....!</h3>");
-        } else {
-            String applicationPath = getServletContext().getRealPath("");
-            String downloadPath = applicationPath + File.separator + UPLOAD_DIR;
-            String filePath = downloadPath + File.separator + fileName;
-            System.out.println(fileName);
-            System.out.println(filePath);
-            System.out.println("fileName:" + fileName);
-            System.out.println("filePath :" + filePath);
-            File file = new File(filePath);
-            OutputStream outStream = null;
-            FileInputStream inputStream = null;
-
-            if (file.exists()) {
-
-                /**
-                 * ** Setting The Content Attributes For The Response Object
-                 * ***
-                 */
-                String mimeType = "application/octet-stream";
-                response.setContentType(mimeType);
-
-                /**
-                 * ** Setting The Headers For The Response Object ***
-                 */
-                String headerKey = "Content-Disposition";
-                String headerValue = String.format("attachment; filename=\"%s\"", file.getName());
-                response.setHeader(headerKey, headerValue);
-
-                try {
-
-                    /**
-                     * ** Get The Output Stream Of The Response ***
-                     */
-                    outStream = response.getOutputStream();
-                    inputStream = new FileInputStream(file);
-                    byte[] buffer = new byte[BUFFER_SIZE];
-                    int bytesRead = -1;
-
-                    /**
-                     * ** Write Each Byte Of Data Read From The Input Stream
-                     * Write Each Byte Of Data Read From The Input Stream Into
-                     * The Output Stream ***
-                     */
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        outStream.write(buffer, 0, bytesRead);
-                    }
-                } catch (IOException ioExObj) {
-                    System.out.println("Exception While Performing The I/O Operation?= " + ioExObj.getMessage());
-                } finally {
-                    if (inputStream != null) {
-                        inputStream.close();
-                    }
-
-                    outStream.flush();
-                    if (outStream != null) {
-                        outStream.close();
-                    }
+            try {
+                con = DB.getConnection();
+                System.out.println("connection done");
+                String sql = "insert into Oppgave(filename,added_date) values(?,?)";
+                ps = con.prepareStatement(sql);
+                ps.setString(1, fileName);
+                ps.setTimestamp(2, added_date);
+                int status = ps.executeUpdate();
+                if (status > 0) {
+                    session.setAttribute("fileName", fileName);
+                    String msg = "" + fileName + " File uploaded successfully...";
+                    request.setAttribute("msg", msg);
+                    RequestDispatcher rd = request.getRequestDispatcher("/success.jsp");
+                    rd.forward(request, response);
+                    System.out.println("File uploaded successfully...");
+                    System.out.println("Uploaded Path: " + uploadPath);
                 }
-            } else {
-
-                /**
-                 * *** Set Response Content Type ****
-                 */
-                response.setContentType("text/html");
-
-                /**
-                 * *** Print The Response ****
-                 */
-                response.getWriter().println("<h3>File " + fileName + " Is Not Present .....!</h3>");
+            } catch (SQLException e) {
+                out.println("Exception: " + e);
+                System.out.println("Exception1: " + e);
+            } finally {
+                try {
+                    if (ps != null) {
+                        ps.close();
+                    }
+                    if (con != null) {
+                        con.close();
+                    }
+                } catch (SQLException e) {
+                    out.println(e);
+                }
             }
 
+        } catch (IOException | ServletException e) {
+            out.println("Exception: " + e);
+            System.out.println("Exception2: " + e);
         }
     }
 
